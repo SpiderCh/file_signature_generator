@@ -49,15 +49,17 @@ class MD5
 	std::array<std::uint32_t, 16> array;
 
 public:
-	void data_to_array(const int begin, const std::vector<char> & data)
+	void data_to_array(const int begin, const std::vector<unsigned char> & data)
 	{
 		for (int i = 0; i < 64;)
 		{
-			array[i / 4]  = data[begin + i++];
-			array[i / 4] |= data[begin + i++] << 8;
-			array[i / 4] |= data[begin + i++] << 16;
-			array[i / 4] |= data[begin + i++] << 24;
+			const int pos = i / 4;
+			array[pos]  = data[begin + i++];
+			array[pos] |= data[begin + i++] << 8;
+			array[pos] |= data[begin + i++] << 16;
+			array[pos] |= data[begin + i++] << 24;
 		}
+
 	}
 
 	void claculate_hash()
@@ -76,7 +78,7 @@ public:
 				g = i;
 			} else if (i <= 31) {
 				F = (D & B) | ((~D) & C);
-				g = (5 * i - 1) % 16;
+				g = (5 * i + 1) % 16;
 			} else if (i <= 47) {
 				F = B ^ C ^ D;
 				g = (3 * i + 5) % 16;
@@ -114,14 +116,32 @@ public:
 };
 } // namespace detail
 
-std::string MD5Hash::CalculateHash(std::vector<char> data)
+std::string MD5Hash::CalculateHash(std::vector<unsigned char> data)
 {
-	size_t original_data_length = data.size() * 8;
+	const uint64_t delimiter = 18446744073709551615;
+	const uint64_t original_data_length_bits = data.size() * 8 ;
+
+	// @note Appending 1 bit to original data.
 	data.push_back(128);
+
 	while ((data.size() * 8) % 512 != 448)
 		data.push_back(0);
 
-	assert((data.size() * 8) % 512 == 448);
+	for (int i = 0; i < 8; ++i)
+		data.push_back(0);
+
+	const uint64_t size_to_write = original_data_length_bits % delimiter;
+
+	data[data.size() - 9] = size_to_write & 0x7F80000000000000;
+	data[data.size() - 7] = size_to_write & 0x7F800000000000;
+	data[data.size() - 6] = size_to_write & 0x7F8000000000;
+	data[data.size() - 5] = size_to_write & 0x7F80000000;
+	data[data.size() - 4] = size_to_write & 0x7F800000;
+	data[data.size() - 3] = size_to_write & 0x7F8000;
+	data[data.size() - 2] = size_to_write & 0x7F80;
+	data[data.size() - 1] = size_to_write & 0x7F;
+
+//	assert((data.size() * 8) % 512 == 448);
 
 	detail::MD5 md5;
 	const int last_block_count = (data.size() * 8) / 512 + 1;

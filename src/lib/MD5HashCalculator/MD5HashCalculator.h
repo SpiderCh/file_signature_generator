@@ -8,7 +8,7 @@ namespace Hash
 class MD5Hash : public IHashCalculator
 {
 public:
-	std::string CalculateHash(std::vector<char> data) override;
+	std::string CalculateHash(std::vector<unsigned char> data) override;
 };
 } // namespace Hash
 
