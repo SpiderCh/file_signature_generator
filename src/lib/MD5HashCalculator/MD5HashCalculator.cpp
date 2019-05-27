@@ -11,6 +11,7 @@ namespace Hash
 {
 namespace detail
 {
+constexpr uint64_t delimiter = 18446744073709551615;
 constexpr char * hex_chars = "0123456789abcdef";
 
 constexpr std::array<std::uint32_t, 64> s {
@@ -54,12 +55,11 @@ public:
 		for (int i = 0; i < 64;)
 		{
 			const int pos = i / 4;
-			array[pos]  = data[begin + i++];
-			array[pos] |= data[begin + i++] << 8;
-			array[pos] |= data[begin + i++] << 16;
-			array[pos] |= data[begin + i++] << 24;
+			array[pos]  = std::uint8_t(data[begin + i++]);
+			array[pos] |= std::uint8_t(data[begin + i++]) << 8;
+			array[pos] |= std::uint8_t(data[begin + i++]) << 16;
+			array[pos] |= std::uint8_t(data[begin + i++]) << 24;
 		}
-
 	}
 
 	void claculate_hash()
@@ -106,7 +106,6 @@ public:
 
 		for (const std::uint32_t & value : data)
 		{
-			std::cout << std::setfill('0') << std::setw(8) << std::hex << value << '\n';
 			for (auto i = 0u; i < 32; i += 4)
 				result.push_back(hex_chars[(value >> (i ^ 4)) & 0xf]);
 		}
@@ -118,7 +117,6 @@ public:
 
 std::string MD5Hash::CalculateHash(std::vector<unsigned char> data)
 {
-	const uint64_t delimiter = 18446744073709551615;
 	const uint64_t original_data_length_bits = data.size() * 8 ;
 
 	// @note Appending 1 bit to original data.
@@ -130,22 +128,15 @@ std::string MD5Hash::CalculateHash(std::vector<unsigned char> data)
 	for (int i = 0; i < 8; ++i)
 		data.push_back(0);
 
-	const uint64_t size_to_write = original_data_length_bits % delimiter;
-
-	data[data.size() - 9] = size_to_write & 0x7F80000000000000;
-	data[data.size() - 7] = size_to_write & 0x7F800000000000;
-	data[data.size() - 6] = size_to_write & 0x7F8000000000;
-	data[data.size() - 5] = size_to_write & 0x7F80000000;
-	data[data.size() - 4] = size_to_write & 0x7F800000;
-	data[data.size() - 3] = size_to_write & 0x7F8000;
-	data[data.size() - 2] = size_to_write & 0x7F80;
-	data[data.size() - 1] = size_to_write & 0x7F;
-
-//	assert((data.size() * 8) % 512 == 448);
+	// @note Appending size of the original data.
+	const uint64_t size_to_write = original_data_length_bits % detail::delimiter;
+	char *ptr = (char*)&size_to_write + 7;
+	for (int i = 1; i < 9; ++i, --ptr)
+		data[data.size() - i] = *ptr;
 
 	detail::MD5 md5;
-	const int last_block_count = (data.size() * 8) / 512 + 1;
-	for (int i = 0; i < last_block_count; i += 64)
+	const int last_block_count = (data.size() * 8) / 512;
+	for (int i = 0, j = 0; j < last_block_count; ++j, i += 64)
 	{
 		md5.data_to_array(i, data);
 		md5.claculate_hash();
