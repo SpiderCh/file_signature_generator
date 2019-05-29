@@ -11,8 +11,8 @@ namespace Hash
 {
 namespace detail
 {
-constexpr uint64_t delimiter = 18446744073709551615;
-constexpr char * hex_chars = "0123456789abcdef";
+constexpr std::uint64_t delimiter = 18446744073709551615U;
+const std::string hex_chars {"0123456789abcdef"};
 
 constexpr std::array<std::uint32_t, 64> s {
 	7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
