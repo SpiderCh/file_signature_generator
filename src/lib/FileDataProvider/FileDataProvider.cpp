@@ -23,7 +23,7 @@ bool FileDataProvider::Initialize()
 	if (m_impl->file_path.empty())
 		return false;
 
-	m_impl->file_stream.open(m_impl->file_path, std::ios_base::in);
+	m_impl->file_stream.open(m_impl->file_path, std::ios_base::in | std::ifstream::binary);
 	return m_impl->file_stream.is_open();
 }
 
