@@ -115,7 +115,7 @@ public:
 };
 } // namespace detail
 
-std::string MD5Hash::CalculateHash(std::vector<unsigned char> data)
+std::string MD5Hash::CalculateHash(std::vector<std::uint8_t> data)
 {
 	const uint64_t original_data_length_bits = data.size() * 8 ;
 

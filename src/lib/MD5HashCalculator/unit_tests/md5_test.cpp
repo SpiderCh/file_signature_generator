@@ -8,7 +8,7 @@
 BOOST_AUTO_TEST_CASE(test_empty_string)
 {
 	const std::string str("");
-	const std::vector<unsigned char> data(str.cbegin(), str.cend());
+	const std::vector<std::uint8_t> data(str.cbegin(), str.cend());
 
 	Hash::MD5Hash hasher;
 	const std::string result = hasher.CalculateHash(data);
@@ -19,7 +19,7 @@ BOOST_AUTO_TEST_CASE(test_empty_string)
 BOOST_AUTO_TEST_CASE(test_string_with_space)
 {
 	const std::string str(" ");
-	const std::vector<unsigned char> data(str.cbegin(), str.cend());
+	const std::vector<std::uint8_t> data(str.cbegin(), str.cend());
 
 	Hash::MD5Hash hasher;
 	const std::string result = hasher.CalculateHash(data);
@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_CASE(test_string_with_space)
 BOOST_AUTO_TEST_CASE(test_md5_md5_string)
 {
 	const std::string str("md5");
-	const std::vector<unsigned char> data(str.cbegin(), str.cend());
+	const std::vector<std::uint8_t> data(str.cbegin(), str.cend());
 
 	Hash::MD5Hash hasher;
 	const std::string result = hasher.CalculateHash(data);
@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_CASE(test_md5_md5_string)
 BOOST_AUTO_TEST_CASE(test_md5_string_with_fox)
 {
 	const std::string string_data ("The quick brown fox jumps over the lazy dog");
-	const std::vector<unsigned char> data (string_data.cbegin(), string_data.cend());
+	const std::vector<std::uint8_t> data (string_data.cbegin(), string_data.cend());
 
 	Hash::MD5Hash hasher;
 	const std::string result = hasher.CalculateHash(data);
@@ -52,7 +52,7 @@ BOOST_AUTO_TEST_CASE(test_md5_string_with_fox)
 BOOST_AUTO_TEST_CASE(test_md5_string_with_alphabet)
 {
 	const std::string string_data ("abcdefghijklmnopqrstuvwxyz");
-	const std::vector<unsigned char> data (string_data.cbegin(), string_data.cend());
+	const std::vector<std::uint8_t> data (string_data.cbegin(), string_data.cend());
 
 	Hash::MD5Hash hasher;
 	const std::string result = hasher.CalculateHash(data);
@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE(test_md5_string_with_alphabet)
 BOOST_AUTO_TEST_CASE(test_md5_string_with_alphabet_extended)
 {
 	const std::string string_data ("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
-	const std::vector<unsigned char> data (string_data.cbegin(), string_data.cend());
+	const std::vector<std::uint8_t> data (string_data.cbegin(), string_data.cend());
 
 	Hash::MD5Hash hasher;
 	const std::string result = hasher.CalculateHash(data);
@@ -74,7 +74,7 @@ BOOST_AUTO_TEST_CASE(test_md5_string_with_alphabet_extended)
 BOOST_AUTO_TEST_CASE(test_md5_long_string_with_numbers)
 {
 	const std::string string_data ("12345678901234567890123456789012345678901234567890123456789012345678901234567890");
-	const std::vector<unsigned char> data (string_data.cbegin(), string_data.cend());
+	const std::vector<std::uint8_t> data (string_data.cbegin(), string_data.cend());
 
 	Hash::MD5Hash hasher;
 	const std::string result = hasher.CalculateHash(data);

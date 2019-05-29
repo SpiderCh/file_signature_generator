@@ -11,7 +11,7 @@ class IHashCalculator
 {
 public:
 	virtual ~IHashCalculator() = default;
-	virtual std::string CalculateHash(std::vector<unsigned char> data) = 0;
+	virtual std::string CalculateHash(std::vector<std::uint8_t> data) = 0;
 };
 } // namespace Hash
 
