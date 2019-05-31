@@ -115,30 +115,37 @@ public:
 };
 } // namespace detail
 
-std::string MD5Hash::CalculateHash(std::vector<std::uint8_t> data)
+std::string MD5Hash::CalculateHash(const std::vector<std::uint8_t> & data)
 {
 	const uint64_t original_data_length_bits = data.size() * 8 ;
 
-	// @note Appending 1 bit to original data.
-	data.push_back(128);
+	// @note Extend size for adding 1 bit to the end of the message.
+	uint64_t padded_size = original_data_length_bits + 8;
 
-	while ((data.size() * 8) % 512 != 448)
-		data.push_back(0);
+	// @note Padding message until size won't be mod 512 == 448
+	while (padded_size % 512 != 448)
+		padded_size += 8;
 
-	for (int i = 0; i < 8; ++i)
-		data.push_back(0);
+	// @note Appending 64 bits for original message size;
+	padded_size += 64;
+
+	std::vector<std::uint8_t> message(padded_size / 8, 0);
+	for (size_t i = 0; i < data.size(); ++i)
+		message[i] = data[i];
+
+	message[data.size()] = 128;
 
 	// @note Appending size of the original data.
 	const uint64_t size_to_write = original_data_length_bits % detail::delimiter;
 	char *ptr = (char*)&size_to_write + 7;
 	for (int i = 1; i < 9; ++i, --ptr)
-		data[data.size() - i] = *ptr;
+		message[message.size() - i] = *ptr;
 
 	detail::MD5 md5;
-	const int last_block_count = (data.size() * 8) / 512;
+	const int last_block_count = (message.size() * 8) / 512;
 	for (int i = 0, j = 0; j < last_block_count; ++j, i += 64)
 	{
-		md5.data_to_array(i, data);
+		md5.data_to_array(i, message);
 		md5.claculate_hash();
 	}
 
