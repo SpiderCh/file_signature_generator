@@ -27,7 +27,7 @@ bool FileDataProvider::Initialize()
 	return m_impl->file_stream.is_open();
 }
 
-std::vector<char> FileDataProvider::Read(size_t bytes)
+std::vector<std::uint8_t> FileDataProvider::Read(size_t bytes)
 {
 	if (m_impl->file_path.empty() || !m_impl->file_stream.is_open())
 		throw std::runtime_error("No resource found");
@@ -35,9 +35,10 @@ std::vector<char> FileDataProvider::Read(size_t bytes)
 	if (eof())
 		throw std::runtime_error("No data available");
 
-	std::vector<char> data;
+	std::vector<std::uint8_t> data;
 	data.resize(bytes);
-	m_impl->file_stream.read(data.data(), bytes);
+	char * begin = reinterpret_cast<char*>(data.data());
+	m_impl->file_stream.read(begin, bytes);
 	return data;
 }
 
