@@ -42,7 +42,7 @@ struct InputParameters
 
 	std::string input_file;
 	std::string output_file;
-	size_t block_size {1024};
+	size_t block_size {1048576};
 };
 
 InputParameters ParseStartOptions(int argc, char** argv)
