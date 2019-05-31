@@ -32,7 +32,7 @@ struct KeyInfo
 };
 
 const KeyInfo INPUT_FILE_KEY("input_file", "i");
-const KeyInfo OUTPUT_FILE_KEY("outpu_file", "o");
+const KeyInfo OUTPUT_FILE_KEY("output_file", "o");
 const KeyInfo BLOCK_SIZE_KEY("block_size", "b");
 const KeyInfo HELP_KEY("help", "h");
 
