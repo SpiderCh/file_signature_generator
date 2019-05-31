@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 project("signature_generator")
 
 set(Boost_INCLUDE_DIR "${SDK_PATH}/boost/1.70/include/")
