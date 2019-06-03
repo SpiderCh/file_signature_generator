@@ -3,13 +3,21 @@
 
 #include "IHashCalculator.h"
 
+#ifdef __APPLE__
+#define DLL_EXPORT
+#else
+#define DLL_EXPORT __declspec(dllexport)
+#endif
+
 namespace Hash
 {
-class CRCHash : public IHashCalculator
+class DLL_EXPORT CRCHash : public IHashCalculator
 {
 public:
 	std::string CalculateHash(const std::vector<std::uint8_t> & data) override;
 };
 } // namespace Hash
+
+#undef DLL_EXPORT
 
 #endif

@@ -6,6 +6,11 @@ project("signature_generator")
 set(Boost_INCLUDE_DIR "${SDK_PATH}/boost/1.70/include/")
 set(Boost_LIBRARY_DIR "${SDK_PATH}/boost/1.70/lib/")
 
+if(WIN32)
+	add_definitions(-DBOOST_ALL_NO_LIB)
+	add_definitions(-DBOOST_ALL_DYN_LINK)
+endif()
+
 find_package(Boost 1.70 COMPONENTS program_options unit_test_framework REQUIRED)
 
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")

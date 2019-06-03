@@ -6,7 +6,13 @@
 
 #include "IHashSaver.h"
 
-class FileHashSaver : public IHashSaver
+#ifdef __APPLE__
+	#define DLL_EXPORT
+#else
+	#define DLL_EXPORT __declspec(dllexport)
+#endif
+
+class DLL_EXPORT FileHashSaver : public IHashSaver
 {
 
 public:
@@ -19,5 +25,7 @@ private:
 	struct Impl;
 	std::unique_ptr<Impl> m_impl;
 };
+
+#undef DLL_EXPORT
 
 #endif // FILE_HASH_SAVER_H
