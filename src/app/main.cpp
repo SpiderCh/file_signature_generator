@@ -6,7 +6,7 @@
 
 #include "SignatureCalculator.h"
 
-#include "FileDataProvider.h"
+#include "FileDataProviderFactory.h"
 #include "MD5HashCalculator.h"
 #include "CRCHashCalculator.h"
 
@@ -106,9 +106,6 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	std::shared_ptr<IDataProvider> data_provider(std::make_shared<FileDataProvider>(params.input_file));
-	const bool data_provider_initialized = data_provider->Initialize();
-	assert(data_provider_initialized);
 
 	std::shared_ptr<Hash::IHashCalculator> hash_calculator;
 	if (params.algoritm == detail::InputParameters::HashAlgorithm::md5)
@@ -116,7 +113,9 @@ int main(int argc, char** argv)
 	else if (params.algoritm == detail::InputParameters::HashAlgorithm::crc)
 		hash_calculator = std::make_shared<Hash::CRCHash>();
 
-	Calculator::CalculatorManager c(data_provider, hash_calculator, params.block_size);
+	std::shared_ptr<IDataProviderFactory> data_provider_factory(std::make_shared<FileDataProviderFactory>(params.input_file));
+
+	Calculator::CalculatorManager c(data_provider_factory, hash_calculator, params.block_size);
 	c.Start();
 
 	return 0;

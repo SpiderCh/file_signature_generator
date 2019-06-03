@@ -10,6 +10,7 @@
 #include <condition_variable>
 
 #include "IDataProvider.h"
+#include "IDataProviderFactory.h"
 #include "IHashCalculator.h"
 
 namespace Calculator
@@ -17,7 +18,7 @@ namespace Calculator
 
 struct CalculatorManager::Impl
 {
-	const std::shared_ptr<IDataProvider> data_provider;
+	const std::shared_ptr<IDataProviderFactory> data_provider_factory;
 	const std::shared_ptr<Hash::IHashCalculator> hash_calculator;
 	const size_t bytes_to_read;
 	const unsigned int num_of_available_threads;
@@ -29,10 +30,10 @@ struct CalculatorManager::Impl
 	std::vector<std::condition_variable> threads_conditional_variables;
 	std::vector<std::optional<std::packaged_task<std::string()>>> thread_tasks_pool;
 
-	Impl(const std::shared_ptr<IDataProvider> & data_provider,
+	Impl(const std::shared_ptr<IDataProviderFactory> & data_provider_factory,
 		 const std::shared_ptr<Hash::IHashCalculator> & hash_calculator,
 		 const size_t read_size)
-		: data_provider(data_provider)
+		: data_provider_factory(data_provider_factory)
 		, hash_calculator(hash_calculator)
 		, bytes_to_read(read_size)
 		, num_of_available_threads(std::thread::hardware_concurrency() > 0 ? std::thread::hardware_concurrency() : 1)
@@ -40,7 +41,7 @@ struct CalculatorManager::Impl
 		, threads_conditional_variables(num_of_available_threads)
 		, thread_tasks_pool(num_of_available_threads)
 	{
-		assert(data_provider);
+		assert(data_provider_factory);
 		assert(hash_calculator);
 		assert(bytes_to_read > 0);
 
@@ -86,8 +87,8 @@ struct CalculatorManager::Impl
 	}
 };
 
-CalculatorManager::CalculatorManager(const std::shared_ptr<IDataProvider> & data_provider, const std::shared_ptr<Hash::IHashCalculator> & hash_calculator, const size_t read_size)
-	: m_impl(std::make_unique<Impl>(data_provider, hash_calculator, read_size))
+CalculatorManager::CalculatorManager(const std::shared_ptr<IDataProviderFactory> & data_provider_factory, const std::shared_ptr<Hash::IHashCalculator> & hash_calculator, const size_t read_size)
+	: m_impl(std::make_unique<Impl>(data_provider_factory, hash_calculator, read_size))
 {}
 
 CalculatorManager::~CalculatorManager() = default;
@@ -95,13 +96,14 @@ CalculatorManager::~CalculatorManager() = default;
 void CalculatorManager::Start()
 {
 	size_t size = 0;
-	while(!m_impl->data_provider->eof())
+	std::unique_ptr<IDataProvider> data_provider = m_impl->data_provider_factory->CreateDataProvider();
+	while(!data_provider->eof())
 	{
 		std::vector<std::future<std::string>> workers;
 
 		for (unsigned int i = 0; i < m_impl->num_of_available_threads; ++i)
 		{
-			std::vector<std::uint8_t> data = m_impl->data_provider->Read(m_impl->bytes_to_read);
+			std::vector<std::uint8_t> data = data_provider->Read(m_impl->bytes_to_read);
 			size += data.size();
 
 			std::lock_guard<std::mutex> lock(m_impl->threads_mutex[i]);
@@ -114,7 +116,7 @@ void CalculatorManager::Start()
 			workers.push_back(std::move(task.get_future()));
 			m_impl->thread_tasks_pool[i] = std::move(task);
 
-			if (m_impl->data_provider->eof())
+			if (data_provider->eof())
 				break;
 		}
 
