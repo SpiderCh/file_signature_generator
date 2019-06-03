@@ -9,7 +9,7 @@ public:
 	virtual ~IDataProvider() = default;
 
 	virtual bool Initialize() = 0;
-	virtual std::vector<std::uint8_t> Read(size_t bytes) = 0;
+	virtual std::vector<std::uint8_t> Read(size_t from, size_t bytes) = 0;
 	virtual bool eof() = 0;
 };
 

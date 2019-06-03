@@ -15,7 +15,7 @@ public:
 
 	bool Initialize() override;
 
-	std::vector<std::uint8_t> Read(size_t bytes) override;
+	std::vector<std::uint8_t> Read(size_t from, size_t bytes) override;
 	bool eof() override;
 
 private:

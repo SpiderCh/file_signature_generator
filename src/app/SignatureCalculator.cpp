@@ -28,7 +28,8 @@ struct CalculatorManager::Impl
 	std::vector<std::thread> threads_pool;
 	std::vector<std::mutex> threads_mutex;
 	std::vector<std::condition_variable> threads_conditional_variables;
-	std::vector<std::optional<std::packaged_task<std::string()>>> thread_tasks_pool;
+	std::vector<std::unique_ptr<IDataProvider>> thread_data_providers;
+	std::vector<std::optional<std::packaged_task<std::optional<std::string>(const int)>>> thread_tasks_pool;
 
 	Impl(const std::shared_ptr<IDataProviderFactory> & data_provider_factory,
 		 const std::shared_ptr<Hash::IHashCalculator> & hash_calculator,
@@ -81,7 +82,7 @@ struct CalculatorManager::Impl
 			if (!data_provider->thread_tasks_pool[thread_index].has_value())
 				assert(false);
 
-			data_provider->thread_tasks_pool[thread_index].value()();
+			data_provider->thread_tasks_pool[thread_index].value()(thread_index);
 			data_provider->thread_tasks_pool[thread_index] = std::nullopt;
 		}
 	}
@@ -95,43 +96,57 @@ CalculatorManager::~CalculatorManager() = default;
 
 void CalculatorManager::Start()
 {
-	size_t size = 0;
-	std::unique_ptr<IDataProvider> data_provider = m_impl->data_provider_factory->CreateDataProvider();
-	while(!data_provider->eof())
-	{
-		std::vector<std::future<std::string>> workers;
+	for (unsigned int i = 0; i < m_impl->num_of_available_threads; ++i)
+		m_impl->thread_data_providers.emplace_back(std::move(m_impl->data_provider_factory->CreateDataProvider()));
 
+	unsigned int processed_blocks = 0;
+	while (true)
+	{
+		std::vector<std::future<std::optional<std::string>>> workers;
 		for (unsigned int i = 0; i < m_impl->num_of_available_threads; ++i)
 		{
-			std::vector<std::uint8_t> data = data_provider->Read(m_impl->bytes_to_read);
-			size += data.size();
-
 			std::lock_guard<std::mutex> lock(m_impl->threads_mutex[i]);
-			std::packaged_task<std::string()> task([data, this]()
+			std::packaged_task<std::optional<std::string>(const int)> task([this, processed_blocks](const int thread_id) -> std::optional<std::string>
 			{
+				const size_t read_from = processed_blocks * m_impl->bytes_to_read;
+				if (m_impl->thread_data_providers[thread_id]->eof())
+					return std::nullopt;
+
+				const std::vector<std::uint8_t> data = m_impl->thread_data_providers[thread_id]->Read(read_from, m_impl->bytes_to_read);
+				if (data.empty())
+					return std::nullopt;
+
 				const std::string result = m_impl->hash_calculator->CalculateHash(data);
-				return result;
+				return std::make_optional(result);
 			});
 
+			++processed_blocks;
 			workers.push_back(std::move(task.get_future()));
 			m_impl->thread_tasks_pool[i] = std::move(task);
-
-			if (data_provider->eof())
-				break;
 		}
 
-		for (size_t i = 0; i < workers.size(); ++i)
-			m_impl->threads_conditional_variables[i].notify_all();
+		for (std::condition_variable & var : m_impl->threads_conditional_variables)
+			var.notify_all();
 
-		const size_t data_size = workers.size();
-		std::cout << "Overall size: " << size << std::endl;
-		for (size_t i = 0; i < data_size; ++i)
+		std::cout << "##########" << std::endl;
+		bool work_finished = workers.empty();
+		for (std::future<std::optional<std::string>> & worker : workers)
 		{
-			assert(workers[i].valid());
-			const std::string result = workers[i].get();
-			std::cout << "Hash Result: " << result << std::endl;
+			std::optional<std::string> result = worker.get();
+			if (!result)
+			{
+				work_finished = true;
+				continue;
+			}
+
+			std::cout << "Hash Result: " << result.value() << std::endl;
 		}
+
+		if (work_finished)
+			break;
 	}
+
+	m_impl->thread_data_providers.clear();
 }
 
 } // namespace Calculator

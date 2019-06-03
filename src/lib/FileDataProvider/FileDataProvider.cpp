@@ -27,13 +27,20 @@ bool FileDataProvider::Initialize()
 	return m_impl->file_stream.is_open();
 }
 
-std::vector<std::uint8_t> FileDataProvider::Read(size_t bytes)
+std::vector<std::uint8_t> FileDataProvider::Read(size_t from, size_t bytes)
 {
 	if (m_impl->file_path.empty() || !m_impl->file_stream.is_open())
 		throw std::runtime_error("No resource found");
 
 	if (eof())
 		throw std::runtime_error("No data available");
+
+	m_impl->file_stream.seekg(from);
+	// @note Trying read from stream. Setting eofbit if needed.
+	m_impl->file_stream.peek();
+
+	if (eof())
+		return {};
 
 	std::vector<std::uint8_t> data;
 	data.resize(bytes);
