@@ -102,10 +102,17 @@ int main(int argc, char** argv)
 
 	if (params.input_file.empty() || params.output_file.empty() || params.block_size < 1)
 	{
-		std::cerr << "Some of input parameters invalid. Call " << argv[0] << " --help for information." << std::endl;
+		std::string invalid_parameters;
+		if (params.input_file.empty())
+			invalid_parameters += detail::INPUT_FILE_KEY.key;
+		if (params.output_file.empty())
+			invalid_parameters += detail::OUTPUT_FILE_KEY.key;
+		if (params.block_size < 1)
+			invalid_parameters += detail::BLOCK_SIZE_KEY.key;
+
+		std::cerr << "Invalid parameters: " << invalid_parameters << "\nCall " << argv[0] << " --help for information." << std::endl;
 		return 1;
 	}
-
 
 	std::shared_ptr<Hash::IHashCalculator> hash_calculator;
 	if (params.algoritm == detail::InputParameters::HashAlgorithm::md5)

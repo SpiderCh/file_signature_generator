@@ -80,7 +80,11 @@ struct CalculatorManager::Impl
 				break;
 
 			if (!data_provider->thread_tasks_pool[thread_index].has_value())
+			{
 				assert(false);
+				std::cerr << "Thread woken with invalid task: " << thread_index << std::endl;
+				continue;
+			}
 
 			data_provider->thread_tasks_pool[thread_index].value()(thread_index);
 			data_provider->thread_tasks_pool[thread_index] = std::nullopt;
@@ -96,8 +100,16 @@ CalculatorManager::~CalculatorManager() = default;
 
 void CalculatorManager::Start()
 {
-	for (unsigned int i = 0; i < m_impl->num_of_available_threads; ++i)
-		m_impl->thread_data_providers.emplace_back(std::move(m_impl->data_provider_factory->CreateDataProvider()));
+	try
+	{
+		for (unsigned int i = 0; i < m_impl->num_of_available_threads; ++i)
+			m_impl->thread_data_providers.emplace_back(std::move(m_impl->data_provider_factory->CreateDataProvider()));
+	}
+	catch (const std::exception & ex)
+	{
+		std::cerr << "Error during initialization of readers: " << ex.what() << std::endl;
+		return;
+	}
 
 	unsigned int processed_blocks = 0;
 	while (true)
