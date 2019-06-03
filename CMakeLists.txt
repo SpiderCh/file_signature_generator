@@ -22,4 +22,5 @@ add_executable(${PROJECT_NAME}  ${SRC_DIR}/app/main.cpp
 target_link_libraries(${PROJECT_NAME} Boost::program_options
 									  InterfaceLib
 									  FileDataProvider
-									  MD5HashCalculator)
+									  MD5HashCalculator
+									  CRCHashCalculator)

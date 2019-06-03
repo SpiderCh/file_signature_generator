@@ -8,6 +8,7 @@
 
 #include "FileDataProvider.h"
 #include "MD5HashCalculator.h"
+#include "CRCHashCalculator.h"
 
 namespace detail
 {
@@ -34,14 +35,21 @@ struct KeyInfo
 const KeyInfo INPUT_FILE_KEY("input_file", "i");
 const KeyInfo OUTPUT_FILE_KEY("output_file", "o");
 const KeyInfo BLOCK_SIZE_KEY("block_size", "b");
+const KeyInfo ALGORITM_TYPE("algorithm", "a");
 const KeyInfo HELP_KEY("help", "h");
 
 struct InputParameters
 {
+	enum class HashAlgorithm
+	{
+		md5,
+		crc
+	};
 	bool help_requested {false};
 
 	std::string input_file;
 	std::string output_file;
+	HashAlgorithm algoritm {HashAlgorithm::md5};
 	size_t block_size {1048576};
 };
 
@@ -52,6 +60,7 @@ InputParameters ParseStartOptions(int argc, char** argv)
 			(INPUT_FILE_KEY.clued_key.data(),  boost::program_options::value<std::string>(), "set path to file which must be hashed")
 			(OUTPUT_FILE_KEY.clued_key.data(), boost::program_options::value<std::string>(), "set path for output file")
 			(BLOCK_SIZE_KEY.clued_key.data(),  boost::program_options::value<size_t>(), "block size")
+			(ALGORITM_TYPE.clued_key.data(),   boost::program_options::value<std::string>(), "use algoritm (md5 or crc)")
 			(HELP_KEY.clued_key.data(), "show current help message")
 	;
 
@@ -76,6 +85,10 @@ InputParameters ParseStartOptions(int argc, char** argv)
 	if (variablesMap.count(BLOCK_SIZE_KEY.key))
 		parameters.block_size = variablesMap[BLOCK_SIZE_KEY.key].as<size_t>();
 
+	if (variablesMap.count(ALGORITM_TYPE.key))
+		parameters.algoritm = variablesMap[ALGORITM_TYPE.key].as<std::string>() == "md5" ? InputParameters::HashAlgorithm::md5
+																						 : InputParameters::HashAlgorithm::crc;
+
 	return parameters;
 }
 } // namespace detail
@@ -97,7 +110,11 @@ int main(int argc, char** argv)
 	const bool data_provider_initialized = data_provider->Initialize();
 	assert(data_provider_initialized);
 
-	std::shared_ptr<Hash::IHashCalculator> hash_calculator(std::make_shared<Hash::MD5Hash>());
+	std::shared_ptr<Hash::IHashCalculator> hash_calculator;
+	if (params.algoritm == detail::InputParameters::HashAlgorithm::md5)
+		hash_calculator = std::make_shared<Hash::MD5Hash>();
+	else if (params.algoritm == detail::InputParameters::HashAlgorithm::crc)
+		hash_calculator = std::make_shared<Hash::CRCHash>();
 
 	Calculator::CalculatorManager c(data_provider, hash_calculator, params.block_size);
 	c.Start();
