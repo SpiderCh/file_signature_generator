@@ -12,4 +12,3 @@ target_link_libraries(md5_test_suite Boost::unit_test_framework
 									 InterfaceLib
 									 MD5HashCalculator)
 
-add_test(NAME test_runner COMMAND md5_test_suite)
