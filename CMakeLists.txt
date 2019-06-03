@@ -11,6 +11,7 @@ find_package(Boost 1.70 COMPONENTS program_options unit_test_framework REQUIRED)
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 include("${SRC_DIR}/interfaces/Interface.cmake")
+include("${SRC_DIR}/lib/FileHashSaver/FileHashSaver.cmake")
 include("${SRC_DIR}/lib/FileDataProvider/FileDataProvider.cmake")
 include("${SRC_DIR}/lib/MD5HashCalculator/MD5HashCalculator.cmake")
 include("${SRC_DIR}/lib/CRCHashCalculator/CRCHashCalculator.cmake")
@@ -21,6 +22,7 @@ add_executable(${PROJECT_NAME}  ${SRC_DIR}/app/main.cpp
 
 target_link_libraries(${PROJECT_NAME} Boost::program_options
 									  InterfaceLib
+									  FileHashSaver
 									  FileDataProvider
 									  MD5HashCalculator
 									  CRCHashCalculator)

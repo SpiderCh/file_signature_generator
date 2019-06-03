@@ -9,6 +9,7 @@
 #include <optional>
 #include <condition_variable>
 
+#include "IHashSaver.h"
 #include "IDataProvider.h"
 #include "IDataProviderFactory.h"
 #include "IHashCalculator.h"
@@ -19,6 +20,7 @@ namespace Calculator
 struct CalculatorManager::Impl
 {
 	const std::shared_ptr<IDataProviderFactory> data_provider_factory;
+	const std::shared_ptr<IHashSaver> hash_saver;
 	const std::shared_ptr<Hash::IHashCalculator> hash_calculator;
 	const size_t bytes_to_read;
 	const unsigned int num_of_available_threads;
@@ -32,9 +34,11 @@ struct CalculatorManager::Impl
 	std::vector<std::optional<std::packaged_task<std::optional<std::string>(const int)>>> thread_tasks_pool;
 
 	Impl(const std::shared_ptr<IDataProviderFactory> & data_provider_factory,
+		 const std::shared_ptr<IHashSaver> & hash_saver,
 		 const std::shared_ptr<Hash::IHashCalculator> & hash_calculator,
 		 const size_t read_size)
 		: data_provider_factory(data_provider_factory)
+		, hash_saver(hash_saver)
 		, hash_calculator(hash_calculator)
 		, bytes_to_read(read_size)
 		, num_of_available_threads(std::thread::hardware_concurrency() > 0 ? std::thread::hardware_concurrency() : 1)
@@ -43,6 +47,7 @@ struct CalculatorManager::Impl
 		, thread_tasks_pool(num_of_available_threads)
 	{
 		assert(data_provider_factory);
+		assert(hash_saver);
 		assert(hash_calculator);
 		assert(bytes_to_read > 0);
 
@@ -92,8 +97,11 @@ struct CalculatorManager::Impl
 	}
 };
 
-CalculatorManager::CalculatorManager(const std::shared_ptr<IDataProviderFactory> & data_provider_factory, const std::shared_ptr<Hash::IHashCalculator> & hash_calculator, const size_t read_size)
-	: m_impl(std::make_unique<Impl>(data_provider_factory, hash_calculator, read_size))
+CalculatorManager::CalculatorManager(const std::shared_ptr<IDataProviderFactory> & data_provider_factory,
+									 const std::shared_ptr<IHashSaver> & hash_saver,
+									 const std::shared_ptr<Hash::IHashCalculator> & hash_calculator,
+									 const size_t read_size)
+	: m_impl(std::make_unique<Impl>(data_provider_factory, hash_saver, hash_calculator, read_size))
 {}
 
 CalculatorManager::~CalculatorManager() = default;
@@ -140,7 +148,6 @@ void CalculatorManager::Start()
 		for (std::condition_variable & var : m_impl->threads_conditional_variables)
 			var.notify_all();
 
-		std::cout << "##########" << std::endl;
 		bool work_finished = workers.empty();
 		for (std::future<std::optional<std::string>> & worker : workers)
 		{
@@ -151,7 +158,7 @@ void CalculatorManager::Start()
 				continue;
 			}
 
-			std::cout << "Hash Result: " << result.value() << std::endl;
+			m_impl->hash_saver->Save(result.value());
 		}
 
 		if (work_finished)

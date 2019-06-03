@@ -6,6 +6,7 @@
 
 #include "SignatureCalculator.h"
 
+#include "FileHashSaver.h"
 #include "FileDataProviderFactory.h"
 #include "MD5HashCalculator.h"
 #include "CRCHashCalculator.h"
@@ -114,16 +115,26 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	std::shared_ptr<Hash::IHashCalculator> hash_calculator;
-	if (params.algoritm == detail::InputParameters::HashAlgorithm::md5)
-		hash_calculator = std::make_shared<Hash::MD5Hash>();
-	else if (params.algoritm == detail::InputParameters::HashAlgorithm::crc)
-		hash_calculator = std::make_shared<Hash::CRCHash>();
+	try
+	{
+		std::shared_ptr<IHashSaver> hashSaver(std::make_shared<FileHashSaver>(params.output_file));
+		std::shared_ptr<Hash::IHashCalculator> hash_calculator;
+		if (params.algoritm == detail::InputParameters::HashAlgorithm::md5)
+			hash_calculator = std::make_shared<Hash::MD5Hash>();
+		else if (params.algoritm == detail::InputParameters::HashAlgorithm::crc)
+			hash_calculator = std::make_shared<Hash::CRCHash>();
 
-	std::shared_ptr<IDataProviderFactory> data_provider_factory(std::make_shared<FileDataProviderFactory>(params.input_file));
+		std::shared_ptr<IDataProviderFactory> data_provider_factory(
+				std::make_shared<FileDataProviderFactory>(params.input_file));
 
-	Calculator::CalculatorManager c(data_provider_factory, hash_calculator, params.block_size);
-	c.Start();
+		Calculator::CalculatorManager c(data_provider_factory, hashSaver, hash_calculator, params.block_size);
+		c.Start();
+	}
+	catch(const std::exception & ex)
+	{
+		std::cerr << "Caught exception: " << ex.what() << std::endl;
+		return 1;
+	}
 
 	return 0;
 }

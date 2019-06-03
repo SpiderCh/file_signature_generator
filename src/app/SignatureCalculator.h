@@ -3,6 +3,7 @@
 
 #include <memory>
 
+class IHashSaver;
 class IDataProviderFactory;
 
 namespace Hash { class IHashCalculator; }
@@ -14,6 +15,7 @@ class CalculatorManager
 {
 public:
 	CalculatorManager(const std::shared_ptr<IDataProviderFactory> & data_provider,
+					  const std::shared_ptr<IHashSaver> & hash_saver,
 					  const std::shared_ptr<Hash::IHashCalculator> & hash_calculator,
 					  const size_t read_size);
 
