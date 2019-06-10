@@ -11,6 +11,8 @@ if(WIN32)
 	add_definitions(-DBOOST_ALL_DYN_LINK)
 endif()
 
+set(Boost_USE_STATIC_LIBS ON)
+
 find_package(Boost 1.70 COMPONENTS program_options unit_test_framework REQUIRED)
 
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
