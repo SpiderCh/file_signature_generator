@@ -92,6 +92,14 @@ InputParameters ParseStartOptions(int argc, char** argv)
 
 	return parameters;
 }
+
+void append_invalid_parameter(std::string & to, const std::string param_name)
+{
+	if (!to.empty())
+		to.append(", ");
+
+	to += param_name;
+}
 } // namespace detail
 
 int main(int argc, char** argv)
@@ -105,11 +113,11 @@ int main(int argc, char** argv)
 	{
 		std::string invalid_parameters;
 		if (params.input_file.empty())
-			invalid_parameters += detail::INPUT_FILE_KEY.key;
+			detail::append_invalid_parameter(invalid_parameters, detail::INPUT_FILE_KEY.key);
 		if (params.output_file.empty())
-			invalid_parameters += detail::OUTPUT_FILE_KEY.key;
+			detail::append_invalid_parameter(invalid_parameters, detail::OUTPUT_FILE_KEY.key);
 		if (params.block_size < 1)
-			invalid_parameters += detail::BLOCK_SIZE_KEY.key;
+			detail::append_invalid_parameter(invalid_parameters, detail::BLOCK_SIZE_KEY.key);
 
 		std::cerr << "Invalid parameters: " << invalid_parameters << "\nCall " << argv[0] << " --help for information." << std::endl;
 		return 1;
