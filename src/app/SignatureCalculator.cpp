@@ -7,6 +7,7 @@
 #include <mutex>
 #include <atomic>
 #include <optional>
+#include <cassert>
 #include <condition_variable>
 
 #include "IHashSaver.h"
