@@ -1,19 +1,26 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.20.3)
 
 set(CMAKE_CXX_STANDARD 17)
-project("signature_generator")
+project("signature_generator" VERSION 0.2)
 
-set(Boost_INCLUDE_DIR "${SDK_PATH}/boost/1.70/include/")
-set(Boost_LIBRARY_DIR "${SDK_PATH}/boost/1.70/lib/")
+set(CONANBUILD_INFO_FILE "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
+set(CONANBUILD_INFO_MULTICONFIGURATION_FILE "${CMAKE_BINARY_DIR}/conanbuildinfo_multi.cmake")
+set(CONAN_OPTIONS "TARGETS;KEEP_RPATHS")
 
-if(WIN32)
-	add_definitions(-DBOOST_ALL_NO_LIB)
-	add_definitions(-DBOOST_ALL_DYN_LINK)
+if (EXISTS "${CONANBUILD_INFO_MULTICONFIGURATION_FILE}")
+	include(${CONANBUILD_INFO_MULTICONFIGURATION_FILE})
+	set(CONAN_CMAKE_MULTI ON)
+elseif (EXISTS "${CONANBUILD_INFO_FILE}")
+	include(${CONANBUILD_INFO_FILE})
+	list(APPEND CONAN_OPTIONS "NO_OUTPUT_DIRS")
+	set(CONAN_CMAKE_MULTI OFF)
+else()
+	message(FATAL_ERROR "Cannot load any conanbuildinfo file.")
 endif()
 
-set(Boost_USE_STATIC_LIBS ON)
+conan_basic_setup(${CONAN_OPTIONS})
 
-find_package(Boost 1.70 COMPONENTS program_options unit_test_framework REQUIRED)
+find_package(Boost 1.76 COMPONENTS program_options unit_test_framework REQUIRED)
 
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
