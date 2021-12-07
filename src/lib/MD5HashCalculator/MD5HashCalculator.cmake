@@ -2,7 +2,7 @@ add_library(MD5HashCalculator SHARED "${CMAKE_CURRENT_LIST_DIR}/MD5HashCalculato
 									"${CMAKE_CURRENT_LIST_DIR}/MD5HashCalculator.h")
 target_include_directories(MD5HashCalculator INTERFACE "${CMAKE_CURRENT_LIST_DIR}")
 
-target_link_libraries(MD5HashCalculator InterfaceLib)
+target_link_libraries(MD5HashCalculator InterfaceLib Boost::system)
 
 add_executable(md5_test_suite "${CMAKE_CURRENT_LIST_DIR}/unit_tests/md5_test.cpp")
 
@@ -11,4 +11,3 @@ target_compile_definitions(md5_test_suite PRIVATE BOOST_TEST_MAIN BOOST_TEST_DYN
 target_link_libraries(md5_test_suite Boost::unit_test_framework
 									 InterfaceLib
 									 MD5HashCalculator)
-
