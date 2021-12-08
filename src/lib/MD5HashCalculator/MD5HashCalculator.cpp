@@ -42,6 +42,11 @@ std::string ToString(const boost::uuids::detail::md5::digest_type & digest)
 
 std::string MD5Hash::CalculateHash(const std::vector<std::uint8_t> & data)
 {
+	return CalculateHash(data.data(), data.size());
+}
+
+std::string MD5Hash::CalculateHash(const std::uint8_t * data, size_t size)
+{
 	/// @note This is private implementation of md5 hash algorithm from boost and better not to use it.
 	/// There had been some issues (https://github.com/boostorg/uuid/issues/111) with backward compatibility.
 	/// Personally, I would prefer using OpenSSL or Crypto++ libraries, but I have restrictions on available libraries.
@@ -49,7 +54,7 @@ std::string MD5Hash::CalculateHash(const std::vector<std::uint8_t> & data)
 	boost::uuids::detail::md5 hash;
 	boost::uuids::detail::md5::digest_type digest;
 
-	hash.process_bytes(data.data(), data.size());
+	hash.process_bytes(data, size);
 	hash.get_digest(digest);
 
 	return detail::ToString(digest);

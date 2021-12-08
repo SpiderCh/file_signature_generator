@@ -1,55 +1,54 @@
 #include <fstream>
+#include <iostream>
+
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+#include <boost/filesystem.hpp>
 
 #include "FileDataProvider.h"
 
-struct FileDataProvider::Impl
-{
-	const std::string file_path;
-	std::ifstream file_stream;
-
-	Impl(const std::string & file_path)
-		: file_path(file_path)
-	{}
-};
-
-FileDataProvider::FileDataProvider(const std::string & file_path)
-	: m_impl(std::make_unique<Impl>(file_path))
+FileDataProvider::FileDataProvider(const std::string & filePath, int fileDescriptor)
+	: m_fileDescriptor(fileDescriptor)//(open(filePath.data(), O_RDONLY))
+	, m_filePath(filePath)
 {}
 
-FileDataProvider::~FileDataProvider() = default;
+FileDataProvider::~FileDataProvider()
+{
+//	close(m_fileDescriptor);
+}
 
 bool FileDataProvider::Initialize()
 {
-	if (m_impl->file_path.empty())
-		return false;
-
-	m_impl->file_stream.open(m_impl->file_path, std::ios_base::in | std::ifstream::binary);
-	return m_impl->file_stream.is_open();
+	return true;
 }
 
 std::vector<std::uint8_t> FileDataProvider::Read(size_t from, size_t bytes)
 {
-	if (m_impl->file_path.empty() || !m_impl->file_stream.is_open())
-		throw std::runtime_error("No resource found");
-
-	if (eof())
-		throw std::runtime_error("No data available");
-
-	m_impl->file_stream.seekg(from);
-	// @note Trying read from stream. Setting eofbit if needed.
-	m_impl->file_stream.peek();
-
-	if (eof())
+	if (from >= boost::filesystem::file_size(m_filePath))
+	{
+		m_eof = true;
 		return {};
+	}
+
+	if (from + bytes > boost::filesystem::file_size(m_filePath))
+		bytes = boost::filesystem::file_size(m_filePath) - from;
+
+	errno = 0;
+	void * dataPtr = mmap(NULL, bytes, PROT_READ, MAP_SHARED, m_fileDescriptor, from);
+//	std::cerr << errno << std::endl;
 
 	std::vector<std::uint8_t> data;
 	data.resize(bytes);
 	char * begin = reinterpret_cast<char*>(data.data());
-	m_impl->file_stream.read(begin, bytes);
+	memcpy(begin, dataPtr, bytes);
+	munmap(dataPtr, bytes);
+
 	return data;
 }
 
 bool FileDataProvider::eof()
 {
-	return m_impl->file_stream.eof();
+	return m_eof;
 }

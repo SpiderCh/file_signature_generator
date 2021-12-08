@@ -15,6 +15,7 @@ class DLL_EXPORT MD5Hash : public IHashCalculator
 {
 public:
 	std::string CalculateHash(const std::vector<std::uint8_t> & data) override;
+	std::string CalculateHash(const std::uint8_t * data, size_t size) override;
 };
 } // namespace Hash
 

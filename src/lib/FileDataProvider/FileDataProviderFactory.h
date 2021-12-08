@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include <sys/mman.h>
+
 #include "IDataProviderFactory.h"
 
 #ifdef __APPLE__
@@ -15,11 +17,13 @@ class DLL_EXPORT FileDataProviderFactory : public IDataProviderFactory
 {
 public:
 	FileDataProviderFactory(const std::string & file_path);
+	~FileDataProviderFactory();
 
 	std::unique_ptr<IDataProvider> CreateDataProvider() const override;
 
 private:
-	const std::string m_file_path;
+	const std::string m_filePath;
+	const int m_fileDescriptor;
 };
 
 #undef DLL_EXPORT

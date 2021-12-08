@@ -20,7 +20,7 @@ endif()
 
 conan_basic_setup(${CONAN_OPTIONS})
 
-find_package(Boost 1.76 COMPONENTS system program_options unit_test_framework REQUIRED)
+find_package(Boost 1.76 COMPONENTS system filesystem program_options unit_test_framework REQUIRED)
 
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 

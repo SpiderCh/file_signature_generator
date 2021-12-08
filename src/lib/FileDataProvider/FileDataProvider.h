@@ -10,7 +10,7 @@ class FileDataProvider : public IDataProvider
 {
 
 public:
-	FileDataProvider(const std::string & file_path);
+	FileDataProvider(const std::string & filePath, int fileDescriptor);
 	~FileDataProvider();
 
 	bool Initialize() override;
@@ -19,8 +19,9 @@ public:
 	bool eof() override;
 
 private:
-	struct Impl;
-	std::unique_ptr<Impl> m_impl;
+	const int m_fileDescriptor;
+	const std::string m_filePath;
+	bool m_eof = false;
 };
 
 #endif

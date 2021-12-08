@@ -4,4 +4,4 @@ add_library(FileDataProvider SHARED "${CMAKE_CURRENT_LIST_DIR}/FileDataProvider.
 									"${CMAKE_CURRENT_LIST_DIR}/FileDataProviderFactory.h")
 target_include_directories(FileDataProvider INTERFACE "${CMAKE_CURRENT_LIST_DIR}")
 
-target_link_libraries(FileDataProvider InterfaceLib)
+target_link_libraries(FileDataProvider InterfaceLib Boost::filesystem)

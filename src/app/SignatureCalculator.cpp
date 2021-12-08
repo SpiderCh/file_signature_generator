@@ -10,6 +10,12 @@
 #include <cassert>
 #include <condition_variable>
 
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/mman.h>
+
+#include <boost/filesystem.hpp>
+
 #include "IHashSaver.h"
 #include "IDataProvider.h"
 #include "IDataProviderFactory.h"
@@ -24,7 +30,7 @@ struct CalculatorManager::Impl
 	const std::shared_ptr<IHashSaver> hash_saver;
 	const std::shared_ptr<Hash::IHashCalculator> hash_calculator;
 	const size_t bytes_to_read;
-	const unsigned int num_of_available_threads;
+	unsigned int num_of_available_threads;
 
 	std::atomic_bool stop_execution {false};
 
@@ -32,11 +38,12 @@ struct CalculatorManager::Impl
 	std::vector<std::mutex> threads_mutex;
 	std::vector<std::condition_variable> threads_conditional_variables;
 	std::vector<std::unique_ptr<IDataProvider>> thread_data_providers;
-	std::vector<std::optional<std::packaged_task<std::optional<std::string>(const int)>>> thread_tasks_pool;
+	std::vector<std::optional<std::packaged_task<std::string()>>> thread_tasks_pool;
 
 	Impl(const std::shared_ptr<IDataProviderFactory> & data_provider_factory,
 		 const std::shared_ptr<IHashSaver> & hash_saver,
 		 const std::shared_ptr<Hash::IHashCalculator> & hash_calculator,
+		 const std::string & filePath,
 		 const size_t read_size)
 		: data_provider_factory(data_provider_factory)
 		, hash_saver(hash_saver)
@@ -51,6 +58,10 @@ struct CalculatorManager::Impl
 		assert(hash_saver);
 		assert(hash_calculator);
 		assert(bytes_to_read > 0);
+
+		const size_t fileSize = boost::filesystem::file_size(filePath);
+		if (fileSize / bytes_to_read < num_of_available_threads)
+			num_of_available_threads = fileSize / bytes_to_read;
 
 		for (unsigned int i = 0; i < num_of_available_threads; ++i)
 			threads_pool.emplace_back(&Impl::ThreadWorker, i, this);
@@ -86,13 +97,9 @@ struct CalculatorManager::Impl
 				break;
 
 			if (!data_provider->thread_tasks_pool[thread_index].has_value())
-			{
-				assert(false);
-				std::cerr << "Thread woken with invalid task: " << thread_index << std::endl;
 				continue;
-			}
 
-			data_provider->thread_tasks_pool[thread_index].value()(thread_index);
+			data_provider->thread_tasks_pool[thread_index].value()();
 			data_provider->thread_tasks_pool[thread_index] = std::nullopt;
 		}
 	}
@@ -101,47 +108,57 @@ struct CalculatorManager::Impl
 CalculatorManager::CalculatorManager(const std::shared_ptr<IDataProviderFactory> & data_provider_factory,
 									 const std::shared_ptr<IHashSaver> & hash_saver,
 									 const std::shared_ptr<Hash::IHashCalculator> & hash_calculator,
+									 const std::string & filePath,
 									 const size_t read_size)
-	: m_impl(std::make_unique<Impl>(data_provider_factory, hash_saver, hash_calculator, read_size))
+	: m_filePath(filePath)
+	, m_impl(std::make_unique<Impl>(data_provider_factory, hash_saver, hash_calculator, filePath, read_size))
 {}
 
 CalculatorManager::~CalculatorManager() = default;
 
 void CalculatorManager::Start()
 {
-	try
-	{
-		for (unsigned int i = 0; i < m_impl->num_of_available_threads; ++i)
-			m_impl->thread_data_providers.emplace_back(std::move(m_impl->data_provider_factory->CreateDataProvider()));
-	}
-	catch (const std::exception & ex)
-	{
-		std::cerr << "Error during initialization of readers: " << ex.what() << std::endl;
-		return;
-	}
+	int fileDescriptor = open(m_filePath.data(), O_RDONLY);
 
-	unsigned int processed_blocks = 0;
-	while (true)
+	if (fileDescriptor < 0)
+		throw std::runtime_error("Cannot open file: " + m_filePath);
+
+	const size_t fileSize = boost::filesystem::file_size(m_filePath);
+
+//	std::cerr << "File size: " << fileSize << std::endl;
+//	std::cerr << "bytes_to_read: " << m_impl->bytes_to_read << std::endl;
+	for (size_t iteration = 0; ; ++iteration)
 	{
-		std::vector<std::future<std::optional<std::string>>> workers;
-		for (unsigned int i = 0; i < m_impl->num_of_available_threads; ++i)
+		const size_t readFrom = iteration * m_impl->bytes_to_read * m_impl->num_of_available_threads;
+		size_t bytesToRead = m_impl->bytes_to_read * m_impl->num_of_available_threads;
+		size_t numOfThreads = m_impl->num_of_available_threads;
+
+		if (readFrom > fileSize)
+			break;
+
+		if (bytesToRead > fileSize)
+		{
+			bytesToRead = fileSize - readFrom;
+			numOfThreads = bytesToRead / m_impl->bytes_to_read;
+		}
+
+//		std::cerr << "  Fixed bytes to read: " << bytesToRead << " Original Bytes To Read: " << m_impl->bytes_to_read << std::endl;
+
+		void * dataPtr = mmap(NULL, bytesToRead, PROT_READ, MAP_SHARED, fileDescriptor, readFrom);
+
+		std::vector<std::future<std::string>> workers;
+		for (unsigned int i = 0; i < numOfThreads; ++i)
 		{
 			std::lock_guard<std::mutex> lock(m_impl->threads_mutex[i]);
-			std::packaged_task<std::optional<std::string>(const int)> task([this, processed_blocks](const int thread_id) -> std::optional<std::string>
+			std::packaged_task<std::string()> task([this, dataPtr, readFrom, i, bytesToRead]() -> std::string
 			{
-				const size_t read_from = processed_blocks * m_impl->bytes_to_read;
-				if (m_impl->thread_data_providers[thread_id]->eof())
-					return std::nullopt;
+				size_t dataSize = m_impl->bytes_to_read;
+//				if (bytesToRead - m_impl->bytes_to_read * processedBlocks <= 0)
+//					dataSize = bytesToRead / processedBlocks;
 
-				const std::vector<std::uint8_t> data = m_impl->thread_data_providers[thread_id]->Read(read_from, m_impl->bytes_to_read);
-				if (data.empty())
-					return std::nullopt;
-
-				const std::string result = m_impl->hash_calculator->CalculateHash(data);
-				return std::make_optional(result);
+				return m_impl->hash_calculator->CalculateHash(reinterpret_cast<uint8_t *>(dataPtr) + m_impl->bytes_to_read * i, dataSize);
 			});
 
-			++processed_blocks;
 			workers.push_back(std::move(task.get_future()));
 			m_impl->thread_tasks_pool[i] = std::move(task);
 		}
@@ -150,7 +167,7 @@ void CalculatorManager::Start()
 			var.notify_all();
 
 		bool work_finished = workers.empty();
-		for (std::future<std::optional<std::string>> & worker : workers)
+		for (std::future<std::string> & worker : workers)
 		{
 			std::optional<std::string> result = worker.get();
 			if (!result)
@@ -162,11 +179,14 @@ void CalculatorManager::Start()
 			m_impl->hash_saver->Save(result.value());
 		}
 
+		munmap(dataPtr, bytesToRead);
+
 		if (work_finished)
 			break;
 	}
 
 	m_impl->thread_data_providers.clear();
+	close(fileDescriptor);
 }
 
 } // namespace Calculator

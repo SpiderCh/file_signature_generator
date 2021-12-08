@@ -93,14 +93,17 @@ std::string to_string(const std::uint32_t & crc)
 }
 std::string CRCHash::CalculateHash(const std::vector<std::uint8_t> & data)
 {
+	return CalculateHash(data.data(), data.size());
+}
+
+std::string CRCHash::CalculateHash(const std::uint8_t * data, size_t size)
+{
 	std::uint32_t crc = 0xFFFFFFFF;
 
-	std::size_t data_length = data.size();
-	for (const std::uint8_t & elem : data)
-		crc = detail::CRC_TABLE[(crc & 0xff) ^ elem] ^ (crc / 256);
+	for (size_t i = 0; i < size; ++i)
+		crc = detail::CRC_TABLE[(crc & 0xff) ^ data[i]] ^ (crc / 256);
 	crc = ~crc;
 
 	return detail::to_string(crc);
 }
 } // namespace Hash
-
