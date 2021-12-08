@@ -10,7 +10,10 @@ MMapDataProvider::MMapDataProvider(const std::string & filePath)
 	: m_filePath(filePath)
 	, m_fileDescriptor(open(m_filePath.data(), O_RDONLY))
 	, m_fileSize(boost::filesystem::file_size(m_filePath))
-{}
+{
+	if (m_fileDescriptor < 0)
+		throw std::runtime_error("Cannot open file: " + m_filePath + " with error: " + std::to_string(errno));
+}
 
 MMapDataProvider::~MMapDataProvider()
 {
@@ -47,7 +50,7 @@ size_t MMapDataProvider::Read(size_t from, size_t bytes)
 	return bytes;
 }
 
-std::uint8_t * MMapDataProvider::Data() const
+const std::uint8_t * MMapDataProvider::Data() const
 {
 	if (m_dataPtr == nullptr || m_dataPtr == MAP_FAILED)
 		return nullptr;

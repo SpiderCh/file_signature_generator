@@ -140,9 +140,9 @@ int main(int argc, char** argv)
 		std::shared_ptr<IDataProvider> dataProvider;
 #if !defined(_WIN32)
 		dataProvider = std::make_shared<MMapDataProvider>(params.input_file);
-#else
-		dataProvider = std::make_shared<IFStreamDataProvider>(params.input_file);
 #endif
+		if (!dataProvider)
+			dataProvider = std::make_shared<IFStreamDataProvider>(params.input_file);
 
 		Calculator::CalculatorManager c(dataProvider, hashSaver, hash_calculator, params.block_size);
 		c.Start();

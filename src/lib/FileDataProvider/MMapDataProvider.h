@@ -1,5 +1,5 @@
-#ifndef FILE_DATA_PROVIDER_H
-#define FILE_DATA_PROVIDER_H
+#ifndef MMAP_DATA_PROVIDER_H
+#define MMAP_DATA_PROVIDER_H
 
 #include <string>
 
@@ -13,7 +13,7 @@ public:
 	~MMapDataProvider();
 
 	size_t Read(size_t from, size_t bytes) override;
-	std::uint8_t * Data() const override;
+	const std::uint8_t * Data() const override;
 	std::size_t TotalSize() const override;
 	bool Eof() override;
 

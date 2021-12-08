@@ -90,20 +90,20 @@ void CalculatorManager::Start()
 		for (size_t i = 0; i < numOfThreads; ++i)
 			m_threadsConditionalVariables[i].notify_all();
 
-		bool work_finished = workers.empty();
+		bool workFinished = workers.empty();
 		for (std::future<std::string> & worker : workers)
 		{
 			std::optional<std::string> result = worker.get();
 			if (!result)
 			{
-				work_finished = true;
+				workFinished = true;
 				continue;
 			}
 
 			m_hashSaver->Save(result.value());
 		}
 
-		if (work_finished)
+		if (workFinished)
 			break;
 	}
 }
