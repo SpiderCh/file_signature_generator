@@ -34,6 +34,10 @@ CalculatorManager::CalculatorManager(const std::shared_ptr<IHashSaver> & hashSav
 	if (m_bytesToRead < 1)
 		throw std::invalid_argument("Invalid bytes to read value.");
 
+	const size_t fileSize = boost::filesystem::file_size(m_filePath);
+	if (fileSize / m_numberOfAvailableThreads < m_bytesToRead)
+		m_numberOfAvailableThreads = fileSize / m_bytesToRead;
+
 	for (unsigned int i = 0; i < m_numberOfAvailableThreads; ++i)
 		m_threadsPool.emplace_back(&CalculatorManager::ThreadWorker, this, i);
 }
