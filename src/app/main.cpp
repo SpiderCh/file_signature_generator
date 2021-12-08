@@ -132,10 +132,7 @@ int main(int argc, char** argv)
 		else if (params.algoritm == detail::InputParameters::HashAlgorithm::crc)
 			hash_calculator = std::make_shared<Hash::CRCHash>();
 
-		std::shared_ptr<IDataProviderFactory> data_provider_factory(
-				std::make_shared<FileDataProviderFactory>(params.input_file));
-
-		Calculator::CalculatorManager c(data_provider_factory, hashSaver, hash_calculator, params.input_file, params.block_size);
+		Calculator::CalculatorManager c(hashSaver, hash_calculator, params.input_file, params.block_size);
 		c.Start();
 	}
 	catch(const std::exception & ex)

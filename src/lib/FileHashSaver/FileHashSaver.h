@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <string>
+#include <fstream>
 
 #include "IHashSaver.h"
 
@@ -22,8 +23,8 @@ public:
 	void Save(const std::string & hash) override;
 
 private:
-	struct Impl;
-	std::unique_ptr<Impl> m_impl;
+	const std::string m_filePath;
+	std::ofstream m_fileStream;
 };
 
 #undef DLL_EXPORT

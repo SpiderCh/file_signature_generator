@@ -4,18 +4,14 @@
 
 #include <array>
 #include <cstdint>
-
-#include <string>
-#include <iostream>
-#include <iomanip>
-#include <cstdint>
+#include <string_view>
 
 namespace Hash
 {
 namespace detail {
-const std::string hex_chars {"0123456789abcdef"};
+constexpr std::string_view hex_chars {"0123456789abcdef"};
 
-std::array<std::uint32_t, 256> CRC_TABLE {
+constexpr std::array<std::uint32_t, 256> CRC_TABLE {
 		0x00000000, 0x77073096, 0xEE0E612C, 0x990951BA,
 		0x076DC419, 0x706AF48F, 0xE963A535, 0x9E6495A3,
 		0x0EDB8832, 0x79DCB8A4, 0xE0D5E91E, 0x97D2D988,
