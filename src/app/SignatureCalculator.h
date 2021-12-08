@@ -13,7 +13,7 @@
 #include <condition_variable>
 
 class IHashSaver;
-class IDataProviderFactory;
+class IDataProvider;
 
 namespace Hash { class IHashCalculator; }
 
@@ -23,9 +23,9 @@ namespace Calculator
 class CalculatorManager
 {
 public:
-	CalculatorManager(const std::shared_ptr<IHashSaver> & hashSaver,
+	CalculatorManager(const std::shared_ptr<IDataProvider> & dataProvider,
+					  const std::shared_ptr<IHashSaver> & hashSaver,
 					  const std::shared_ptr<Hash::IHashCalculator> & hashCalculator,
-					  const std::string & filePath,
 					  const size_t readSize);
 
 	~CalculatorManager();
@@ -34,7 +34,7 @@ public:
 private:
 	void ThreadWorker(int threadIndex);
 
-	const std::string m_filePath;
+	const std::shared_ptr<IDataProvider> m_dataProvider;
 	const std::shared_ptr<IHashSaver> m_hashSaver;
 	const std::shared_ptr<Hash::IHashCalculator> m_hashCalculator;
 	const size_t m_bytesToRead;

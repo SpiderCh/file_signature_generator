@@ -6,10 +6,15 @@
 
 #include "SignatureCalculator.h"
 
+
 #include "FileHashSaver.h"
-#include "FileDataProviderFactory.h"
+#include "IFStreamDataProvider.h"
 #include "MD5HashCalculator.h"
 #include "CRCHashCalculator.h"
+
+#if !defined(_WIN32)
+	#include "MMapDataProvider.h"
+#endif
 
 namespace detail
 {
@@ -132,7 +137,14 @@ int main(int argc, char** argv)
 		else if (params.algoritm == detail::InputParameters::HashAlgorithm::crc)
 			hash_calculator = std::make_shared<Hash::CRCHash>();
 
-		Calculator::CalculatorManager c(hashSaver, hash_calculator, params.input_file, params.block_size);
+		std::shared_ptr<IDataProvider> dataProvider;
+#if !defined(_WIN32)
+		dataProvider = std::make_shared<MMapDataProvider>(params.input_file);
+#else
+		dataProvider = std::make_shared<IFStreamDataProvider>(params.input_file);
+#endif
+
+		Calculator::CalculatorManager c(dataProvider, hashSaver, hash_calculator, params.block_size);
 		c.Start();
 	}
 	catch(const std::exception & ex)

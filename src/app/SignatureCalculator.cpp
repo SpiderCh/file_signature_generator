@@ -1,24 +1,17 @@
 #include "SignatureCalculator.h"
 
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/mman.h>
-
-#include <boost/filesystem.hpp>
-
 #include "IHashSaver.h"
 #include "IDataProvider.h"
-#include "IDataProviderFactory.h"
 #include "IHashCalculator.h"
 
 namespace Calculator
 {
 
-CalculatorManager::CalculatorManager(const std::shared_ptr<IHashSaver> & hashSaver,
+CalculatorManager::CalculatorManager(const std::shared_ptr<IDataProvider> & dataProvider,
+									 const std::shared_ptr<IHashSaver> & hashSaver,
 									 const std::shared_ptr<Hash::IHashCalculator> & hashCalculator,
-									 const std::string & filePath,
 									 const size_t readSize)
-	: m_filePath(filePath)
+	: m_dataProvider(dataProvider)
 	, m_hashSaver(hashSaver)
 	, m_hashCalculator(hashCalculator)
 	, m_bytesToRead(readSize)
@@ -27,6 +20,8 @@ CalculatorManager::CalculatorManager(const std::shared_ptr<IHashSaver> & hashSav
 	, m_threadsConditionalVariables(m_numberOfAvailableThreads)
 	, m_threadsTasksPool(m_numberOfAvailableThreads)
 {
+	if (!m_dataProvider)
+		throw std::invalid_argument("Invalid data provider.");
 	if (!m_hashSaver)
 		throw std::invalid_argument("Invalid hash saver.");
 	if (!m_hashCalculator)
@@ -34,7 +29,7 @@ CalculatorManager::CalculatorManager(const std::shared_ptr<IHashSaver> & hashSav
 	if (m_bytesToRead < 1)
 		throw std::invalid_argument("Invalid bytes to read value.");
 
-	const size_t fileSize = boost::filesystem::file_size(m_filePath);
+	const size_t fileSize = m_dataProvider->TotalSize();
 	if (fileSize / m_numberOfAvailableThreads < m_bytesToRead)
 		m_numberOfAvailableThreads = fileSize / m_bytesToRead;
 
@@ -60,46 +55,32 @@ CalculatorManager::~CalculatorManager()
 
 void CalculatorManager::Start()
 {
-	int fileDescriptor = open(m_filePath.data(), O_RDONLY);
-
-	if (fileDescriptor < 0)
-		throw std::runtime_error("Cannot open file: " + m_filePath);
-
-	const size_t fileSize = boost::filesystem::file_size(m_filePath);
-
 	for (size_t iteration = 0; ; ++iteration)
 	{
 		const size_t readFrom = iteration * m_bytesToRead * m_numberOfAvailableThreads;
-		size_t bytesToRead = m_bytesToRead * m_numberOfAvailableThreads;
-		size_t numOfThreads = m_numberOfAvailableThreads;
+		const size_t bytesToRead = m_bytesToRead * m_numberOfAvailableThreads;
 
-		if (readFrom > fileSize)
+		const size_t readBytes = m_dataProvider->Read(readFrom, bytesToRead);
+
+		if (readBytes == 0)
 			break;
 
-		if (bytesToRead > fileSize - readFrom)
-		{
-			bytesToRead = fileSize - readFrom;
-			numOfThreads = bytesToRead / m_bytesToRead;
-		}
-
-		errno = 0;
-		void * dataPtr = mmap(nullptr, bytesToRead, PROT_READ, MAP_SHARED, fileDescriptor, readFrom);
-
-		if (errno != 0 || dataPtr == MAP_FAILED)
-			throw std::runtime_error("Cannot map file. Error code: " + std::to_string(errno));
+		size_t numOfThreads = m_numberOfAvailableThreads;
+		if (bytesToRead != readBytes)
+			numOfThreads = readBytes / m_bytesToRead;
 
 		std::vector<std::future<std::string>> workers;
 		workers.resize(numOfThreads);
 		for (unsigned int i = 0; i < numOfThreads; ++i)
 		{
 			std::lock_guard<std::mutex> lock(m_threadsMutexes[i]);
-			std::packaged_task<std::string()> task([this, dataPtr, readFrom, i, fileSize]()
+			std::packaged_task<std::string()> task([this, readFrom, i]()
 			{
 				size_t dataSize = m_bytesToRead;
-				if (dataSize > fileSize - (readFrom + dataSize * i))
-					dataSize = fileSize - (readFrom + dataSize * i);
+				if (dataSize > m_dataProvider->TotalSize() - (readFrom + dataSize * i))
+					dataSize = m_dataProvider->TotalSize() - (readFrom + dataSize * i);
 
-				return m_hashCalculator->CalculateHash(reinterpret_cast<uint8_t *>(dataPtr) + m_bytesToRead * i, dataSize);
+				return m_hashCalculator->CalculateHash(m_dataProvider->Data() + m_bytesToRead * i, dataSize);
 			});
 
 			workers[i] = std::move(task.get_future());
@@ -122,13 +103,9 @@ void CalculatorManager::Start()
 			m_hashSaver->Save(result.value());
 		}
 
-		munmap(dataPtr, bytesToRead);
-
 		if (work_finished)
 			break;
 	}
-
-	close(fileDescriptor);
 }
 
 void CalculatorManager::ThreadWorker(int threadIndex)
