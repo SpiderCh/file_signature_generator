@@ -72,24 +72,28 @@ void CalculatorManager::Start()
 		if (readFrom > fileSize)
 			break;
 
-		if (bytesToRead > fileSize)
+		if (bytesToRead > fileSize - readFrom)
 		{
 			bytesToRead = fileSize - readFrom;
 			numOfThreads = bytesToRead / m_bytesToRead;
 		}
 
-		void * dataPtr = mmap(NULL, bytesToRead, PROT_READ, MAP_SHARED, fileDescriptor, readFrom);
+		errno = 0;
+		void * dataPtr = mmap(nullptr, bytesToRead, PROT_READ, MAP_SHARED, fileDescriptor, readFrom);
+
+		if (errno != 0 || dataPtr == MAP_FAILED)
+			throw std::runtime_error("Cannot map file. Error code: " + std::to_string(errno));
 
 		std::vector<std::future<std::string>> workers;
 		workers.resize(numOfThreads);
 		for (unsigned int i = 0; i < numOfThreads; ++i)
 		{
 			std::lock_guard<std::mutex> lock(m_threadsMutexes[i]);
-			std::packaged_task<std::string()> task([this, dataPtr, readFrom, i, bytesToRead]() -> std::string
+			std::packaged_task<std::string()> task([this, dataPtr, readFrom, i, fileSize]()
 			{
 				size_t dataSize = m_bytesToRead;
-//				if (bytesToRead - m_impl->bytes_to_read * processedBlocks <= 0)
-//					dataSize = bytesToRead / processedBlocks;
+				if (dataSize > fileSize - (readFrom + dataSize * i))
+					dataSize = fileSize - (readFrom + dataSize * i);
 
 				return m_hashCalculator->CalculateHash(reinterpret_cast<uint8_t *>(dataPtr) + m_bytesToRead * i, dataSize);
 			});
@@ -98,8 +102,8 @@ void CalculatorManager::Start()
 			m_threadsTasksPool[i] = std::move(task);
 		}
 
-		for (std::condition_variable & var : m_threadsConditionalVariables)
-			var.notify_all();
+		for (size_t i = 0; i < numOfThreads; ++i)
+			m_threadsConditionalVariables[i].notify_all();
 
 		bool work_finished = workers.empty();
 		for (std::future<std::string> & worker : workers)
