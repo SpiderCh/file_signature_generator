@@ -105,6 +105,16 @@ void append_invalid_parameter(std::string & to, const std::string param_name)
 
 	to += param_name;
 }
+
+bool block_size_valid(size_t blockSize)
+{
+#if __x86_64__ || __arm64__ || __ppc64__ || _WIN64
+	return true;
+#else
+	constexpr size_t FOUR_GB_IN_BYTES = 4294967296;
+	return blockSize >= FOUR_GB_IN_BYTES;
+#endif
+}
 } // namespace detail
 
 int main(int argc, char** argv)
@@ -121,7 +131,7 @@ int main(int argc, char** argv)
 			detail::append_invalid_parameter(invalid_parameters, detail::INPUT_FILE_KEY.key);
 		if (params.output_file.empty())
 			detail::append_invalid_parameter(invalid_parameters, detail::OUTPUT_FILE_KEY.key);
-		if (params.block_size < 1)
+		if (params.block_size < 1 || detail::block_size_valid(params.block_size))
 			detail::append_invalid_parameter(invalid_parameters, detail::BLOCK_SIZE_KEY.key);
 
 		std::cerr << "Invalid parameters: " << invalid_parameters << "\nCall " << argv[0] << " --help for information." << std::endl;

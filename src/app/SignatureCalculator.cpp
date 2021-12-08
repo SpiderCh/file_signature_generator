@@ -4,6 +4,12 @@
 #include "IDataProvider.h"
 #include "IHashCalculator.h"
 
+#if __x86_64__ || __ppc64__ || __arm64__ || _WIN64
+	#define ENV64BIT
+#else
+	#define ENV32BIT
+#endif
+
 namespace Calculator
 {
 
@@ -32,6 +38,17 @@ CalculatorManager::CalculatorManager(const std::shared_ptr<IDataProvider> & data
 	const size_t fileSize = m_dataProvider->TotalSize();
 	if (fileSize / m_numberOfAvailableThreads < m_bytesToRead)
 		m_numberOfAvailableThreads = fileSize / m_bytesToRead;
+
+#ifdef ENV32BIT
+	constexpr size_t FOUR_GB_IN_BYTES = 4294967296;
+	if (m_bytesToRead * m_numberOfAvailableThreads >= FOUR_GB_IN_BYTES)
+	{
+		size_t i = m_numberOfAvailableThreads;
+		for(; m_numberOfAvailableThreads > 1; --m_numberOfAvailableThreads)
+			if (m_bytesToRead * m_numberOfAvailableThreads < FOUR_GB_IN_BYTES)
+				break;
+	}
+#endif
 
 	for (unsigned int i = 0; i < m_numberOfAvailableThreads; ++i)
 		m_threadsPool.emplace_back(&CalculatorManager::ThreadWorker, this, i);
