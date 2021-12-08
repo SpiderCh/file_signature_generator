@@ -22,18 +22,18 @@ namespace detail
 struct KeyInfo
 {
 	const std::string key {};
-	const std::string shorten_key {};
-	const std::string clued_key {};
+	const std::string shortenKey {};
+	const std::string cluedKey {};
 
 	explicit KeyInfo(const std::string & key)
 		: key(key)
-		, clued_key(key)
+		, cluedKey(key)
 	{}
 
-	KeyInfo(const std::string & key, const std::string & shorten_key)
+	KeyInfo(const std::string & key, const std::string & shortenKey)
 		: key(key)
-		, shorten_key(shorten_key)
-		, clued_key(key + (shorten_key.empty() ? "" : "," + shorten_key))
+		, shortenKey(shortenKey)
+		, cluedKey(key + (shortenKey.empty() ? "" : "," + shortenKey))
 	{}
 
 };
@@ -51,23 +51,23 @@ struct InputParameters
 		md5,
 		crc
 	};
-	bool help_requested {false};
+	bool helpRequested {false};
 
-	std::string input_file;
-	std::string output_file;
+	std::string inputFile;
+	std::string outputFile;
 	HashAlgorithm algoritm {HashAlgorithm::md5};
-	size_t block_size {1048576};
+	size_t blockSize {1048576};
 };
 
 InputParameters ParseStartOptions(int argc, char** argv)
 {
 	boost::program_options::options_description desription;
 	desription.add_options()
-			(INPUT_FILE_KEY.clued_key.data(),  boost::program_options::value<std::string>(), "set path to file which must be hashed")
-			(OUTPUT_FILE_KEY.clued_key.data(), boost::program_options::value<std::string>(), "set path for output file")
-			(BLOCK_SIZE_KEY.clued_key.data(),  boost::program_options::value<size_t>(), "block size")
-			(ALGORITM_TYPE.clued_key.data(),   boost::program_options::value<std::string>(), "use algoritm (md5 or crc)")
-			(HELP_KEY.clued_key.data(), "show current help message")
+			(INPUT_FILE_KEY.cluedKey.data(),  boost::program_options::value<std::string>(), "set path to file which must be hashed")
+			(OUTPUT_FILE_KEY.cluedKey.data(), boost::program_options::value<std::string>(), "set path for output file")
+			(BLOCK_SIZE_KEY.cluedKey.data(),  boost::program_options::value<size_t>(), "block size")
+			(ALGORITM_TYPE.cluedKey.data(),   boost::program_options::value<std::string>(), "use algoritm (md5 or crc)")
+			(HELP_KEY.cluedKey.data(), "show current help message")
 	;
 
 	boost::program_options::variables_map variablesMap;
@@ -75,21 +75,21 @@ InputParameters ParseStartOptions(int argc, char** argv)
 	boost::program_options::notify(variablesMap);
 
 	InputParameters parameters;
-	parameters.help_requested = variablesMap.count(HELP_KEY.key);
-	if (parameters.help_requested)
+	parameters.helpRequested = variablesMap.count(HELP_KEY.key);
+	if (parameters.helpRequested)
 	{
 		std::cout << desription << std::endl;
 		return parameters;
 	}
 
 	if (variablesMap.count(INPUT_FILE_KEY.key))
-		parameters.input_file = variablesMap[INPUT_FILE_KEY.key].as<std::string>();
+		parameters.inputFile = variablesMap[INPUT_FILE_KEY.key].as<std::string>();
 
 	if (variablesMap.count(OUTPUT_FILE_KEY.key))
-		parameters.output_file = variablesMap[OUTPUT_FILE_KEY.key].as<std::string>();
+		parameters.outputFile = variablesMap[OUTPUT_FILE_KEY.key].as<std::string>();
 
 	if (variablesMap.count(BLOCK_SIZE_KEY.key))
-		parameters.block_size = variablesMap[BLOCK_SIZE_KEY.key].as<size_t>();
+		parameters.blockSize = variablesMap[BLOCK_SIZE_KEY.key].as<size_t>();
 
 	if (variablesMap.count(ALGORITM_TYPE.key))
 		parameters.algoritm = variablesMap[ALGORITM_TYPE.key].as<std::string>() == "md5" ? InputParameters::HashAlgorithm::md5
@@ -98,15 +98,15 @@ InputParameters ParseStartOptions(int argc, char** argv)
 	return parameters;
 }
 
-void append_invalid_parameter(std::string & to, const std::string param_name)
+void AppendInvalidParameter(std::string & to, const std::string paramName)
 {
 	if (!to.empty())
 		to.append(", ");
 
-	to += param_name;
+	to += paramName;
 }
 
-bool block_size_valid(size_t blockSize)
+bool BlockSizeValid(size_t blockSize)
 {
 #if __x86_64__ || __arm64__ || __ppc64__ || _WIN64
 	return true;
@@ -121,18 +121,18 @@ int main(int argc, char** argv)
 {
 	const detail::InputParameters params = detail::ParseStartOptions(argc, argv);
 
-	if (params.help_requested)
+	if (params.helpRequested)
 		return 0;
 
-	if (params.input_file.empty() || params.output_file.empty() || params.block_size < 1)
+	if (params.inputFile.empty() || params.outputFile.empty() || params.blockSize < 1)
 	{
 		std::string invalid_parameters;
-		if (params.input_file.empty())
-			detail::append_invalid_parameter(invalid_parameters, detail::INPUT_FILE_KEY.key);
-		if (params.output_file.empty())
-			detail::append_invalid_parameter(invalid_parameters, detail::OUTPUT_FILE_KEY.key);
-		if (params.block_size < 1 || detail::block_size_valid(params.block_size))
-			detail::append_invalid_parameter(invalid_parameters, detail::BLOCK_SIZE_KEY.key);
+		if (params.inputFile.empty())
+			detail::AppendInvalidParameter(invalid_parameters, detail::INPUT_FILE_KEY.key);
+		if (params.outputFile.empty())
+			detail::AppendInvalidParameter(invalid_parameters, detail::OUTPUT_FILE_KEY.key);
+		if (params.blockSize < 1 || detail::BlockSizeValid(params.blockSize))
+			detail::AppendInvalidParameter(invalid_parameters, detail::BLOCK_SIZE_KEY.key);
 
 		std::cerr << "Invalid parameters: " << invalid_parameters << "\nCall " << argv[0] << " --help for information." << std::endl;
 		return 1;
@@ -140,7 +140,7 @@ int main(int argc, char** argv)
 
 	try
 	{
-		std::shared_ptr<IHashSaver> hashSaver(std::make_shared<FileHashSaver>(params.output_file));
+		std::shared_ptr<IHashSaver> hashSaver(std::make_shared<FileHashSaver>(params.outputFile));
 		std::shared_ptr<Hash::IHashCalculator> hash_calculator;
 		if (params.algoritm == detail::InputParameters::HashAlgorithm::md5)
 			hash_calculator = std::make_shared<Hash::MD5Hash>();
@@ -149,12 +149,12 @@ int main(int argc, char** argv)
 
 		std::shared_ptr<IDataProvider> dataProvider;
 #if !defined(_WIN32)
-		dataProvider = std::make_shared<MMapDataProvider>(params.input_file);
+		dataProvider = std::make_shared<MMapDataProvider>(params.inputFile);
 #endif
 		if (!dataProvider)
-			dataProvider = std::make_shared<IFStreamDataProvider>(params.input_file);
+			dataProvider = std::make_shared<IFStreamDataProvider>(params.inputFile);
 
-		Calculator::CalculatorManager c(dataProvider, hashSaver, hash_calculator, params.block_size);
+		Calculator::CalculatorManager c(dataProvider, hashSaver, hash_calculator, params.blockSize);
 		c.Start();
 	}
 	catch(const std::exception & ex)
