@@ -38,7 +38,7 @@ private:
 	const std::shared_ptr<IHashSaver> m_hashSaver;
 	const std::shared_ptr<Hash::IHashCalculator> m_hashCalculator;
 	const size_t m_bytesToRead;
-	unsigned int m_numberOfAvailableThreads;
+	const unsigned int m_numberOfAvailableThreads;
 
 	std::atomic_bool m_stopExecution {false};
 

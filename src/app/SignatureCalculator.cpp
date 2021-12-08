@@ -13,6 +13,30 @@
 namespace Calculator
 {
 
+namespace
+{
+unsigned int CalculateNumberOfAvailableThreads(const size_t fileSize, const size_t bytesToRead)
+{
+	if (std::thread::hardware_concurrency() < 2)
+		return 1;
+	unsigned int numberOfAvailableThreads = std::thread::hardware_concurrency();
+	if (fileSize / numberOfAvailableThreads < bytesToRead)
+		numberOfAvailableThreads = fileSize / bytesToRead;
+
+#ifdef ENV32BIT
+	constexpr size_t FOUR_GB_IN_BYTES = 4294967296;
+	if (bytesToRead * numberOfAvailableThreads >= FOUR_GB_IN_BYTES)
+	{
+		for(; numberOfAvailableThreads > 1; --numberOfAvailableThreads)
+			if (bytesToRead * numberOfAvailableThreads < FOUR_GB_IN_BYTES)
+				break;
+	}
+#endif
+
+	return numberOfAvailableThreads;
+}
+}
+
 CalculatorManager::CalculatorManager(const std::shared_ptr<IDataProvider> & dataProvider,
 									 const std::shared_ptr<IHashSaver> & hashSaver,
 									 const std::shared_ptr<Hash::IHashCalculator> & hashCalculator,
@@ -21,7 +45,7 @@ CalculatorManager::CalculatorManager(const std::shared_ptr<IDataProvider> & data
 	, m_hashSaver(hashSaver)
 	, m_hashCalculator(hashCalculator)
 	, m_bytesToRead(readSize)
-	, m_numberOfAvailableThreads(std::thread::hardware_concurrency() > 0 ? std::thread::hardware_concurrency() : 1)
+	, m_numberOfAvailableThreads(CalculateNumberOfAvailableThreads(m_dataProvider->TotalSize(), readSize))
 	, m_threadsMutexes(m_numberOfAvailableThreads)
 	, m_threadsConditionalVariables(m_numberOfAvailableThreads)
 	, m_threadsTasksPool(m_numberOfAvailableThreads)
@@ -34,21 +58,6 @@ CalculatorManager::CalculatorManager(const std::shared_ptr<IDataProvider> & data
 		throw std::invalid_argument("Invalid hash calculator.");
 	if (m_bytesToRead < 1)
 		throw std::invalid_argument("Invalid bytes to read value.");
-
-	const size_t fileSize = m_dataProvider->TotalSize();
-	if (fileSize / m_numberOfAvailableThreads < m_bytesToRead)
-		m_numberOfAvailableThreads = fileSize / m_bytesToRead;
-
-#ifdef ENV32BIT
-	constexpr size_t FOUR_GB_IN_BYTES = 4294967296;
-	if (m_bytesToRead * m_numberOfAvailableThreads >= FOUR_GB_IN_BYTES)
-	{
-		size_t i = m_numberOfAvailableThreads;
-		for(; m_numberOfAvailableThreads > 1; --m_numberOfAvailableThreads)
-			if (m_bytesToRead * m_numberOfAvailableThreads < FOUR_GB_IN_BYTES)
-				break;
-	}
-#endif
 
 	for (unsigned int i = 0; i < m_numberOfAvailableThreads; ++i)
 		m_threadsPool.emplace_back(&CalculatorManager::ThreadWorker, this, i);
