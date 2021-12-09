@@ -1,4 +1,3 @@
-#include <thread>
 #include <string>
 #include <iostream>
 
@@ -6,13 +5,12 @@
 
 #include "SignatureCalculator.h"
 
-
 #include "FileHashSaver.h"
 #include "IFStreamDataProvider.h"
 #include "MD5HashCalculator.h"
 #include "CRCHashCalculator.h"
 
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(_WIN64)
 	#include "MMapDataProvider.h"
 #endif
 
@@ -148,7 +146,8 @@ int main(int argc, char** argv)
 			hash_calculator = std::make_shared<Hash::CRCHash>();
 
 		std::shared_ptr<IDataProvider> dataProvider;
-#if !defined(_WIN32)
+
+#if !defined(_WIN32) && !defined(_WIN64)
 		dataProvider = std::make_shared<MMapDataProvider>(params.inputFile);
 #endif
 		if (!dataProvider)
