@@ -2,13 +2,11 @@
 #define SIGNATURE_CALCULATOR_H
 
 #include <memory>
-#include <string>
 #include <future>
 #include <thread>
 #include <vector>
 #include <mutex>
 #include <atomic>
-#include <optional>
 #include <cassert>
 #include <condition_variable>
 
@@ -45,7 +43,7 @@ private:
 	std::vector<std::thread> m_threadsPool;
 	std::vector<std::mutex> m_threadsMutexes;
 	std::vector<std::condition_variable> m_threadsConditionalVariables;
-	std::vector<std::optional<std::packaged_task<std::string()>>> m_threadsTasksPool;
+	std::vector<std::packaged_task<std::string()>> m_threadsTasksPool;
 };
 } // namespace Calculator
 

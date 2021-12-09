@@ -82,6 +82,8 @@ CalculatorManager::~CalculatorManager()
 
 void CalculatorManager::Start()
 {
+	std::vector<std::future<std::string>> workers;
+	workers.resize(m_numberOfAvailableThreads);
 	for (size_t iteration = 0; ; ++iteration)
 	{
 		const size_t readFrom = iteration * m_bytesToRead * m_numberOfAvailableThreads;
@@ -96,8 +98,6 @@ void CalculatorManager::Start()
 		if (bytesToRead != readBytes)
 			numOfThreads = readBytes / m_bytesToRead;
 
-		std::vector<std::future<std::string>> workers;
-		workers.resize(numOfThreads);
 		for (unsigned int i = 0; i < numOfThreads; ++i)
 		{
 			std::lock_guard<std::mutex> lock(m_threadsMutexes[i]);
@@ -112,26 +112,11 @@ void CalculatorManager::Start()
 
 			workers[i] = std::move(task.get_future());
 			m_threadsTasksPool[i] = std::move(task);
+			m_threadsConditionalVariables[i].notify_all();
 		}
 
 		for (size_t i = 0; i < numOfThreads; ++i)
-			m_threadsConditionalVariables[i].notify_all();
-
-		bool workFinished = workers.empty();
-		for (std::future<std::string> & worker : workers)
-		{
-			std::optional<std::string> result = worker.get();
-			if (!result)
-			{
-				workFinished = true;
-				continue;
-			}
-
-			m_hashSaver->Save(result.value());
-		}
-
-		if (workFinished)
-			break;
+			m_hashSaver->Save(workers[i].get());
 	}
 }
 
@@ -148,11 +133,7 @@ void CalculatorManager::ThreadWorker(int threadIndex)
 		if (m_stopExecution)
 			break;
 
-		if (!m_threadsTasksPool[threadIndex].has_value())
-			continue;
-
-		m_threadsTasksPool[threadIndex].value()();
-		m_threadsTasksPool[threadIndex] = std::nullopt;
+		m_threadsTasksPool[threadIndex]();
 	}
 }
 
