@@ -17,6 +17,9 @@ namespace
 {
 unsigned int CalculateNumberOfAvailableThreads(const size_t fileSize, const size_t bytesToRead)
 {
+	if (bytesToRead < 1)
+		throw std::invalid_argument("Invalid bytes to read value.");
+
 	if (std::thread::hardware_concurrency() < 2)
 		return 1;
 	unsigned int numberOfAvailableThreads = std::thread::hardware_concurrency();
@@ -56,8 +59,6 @@ CalculatorManager::CalculatorManager(const std::shared_ptr<IDataProvider> & data
 		throw std::invalid_argument("Invalid hash saver.");
 	if (!m_hashCalculator)
 		throw std::invalid_argument("Invalid hash calculator.");
-	if (m_bytesToRead < 1)
-		throw std::invalid_argument("Invalid bytes to read value.");
 
 	for (unsigned int i = 0; i < m_numberOfAvailableThreads; ++i)
 		m_threadsPool.emplace_back(&CalculatorManager::ThreadWorker, this, i);
