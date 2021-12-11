@@ -25,8 +25,9 @@ size_t IFStreamDataProvider::Read(size_t from, size_t bytes)
 	if (bytes > m_fileSize - from)
 		bytes = m_fileSize - from;
 
-	m_data.clear();
-	m_data.resize(bytes);
+	if (m_data.size() < bytes)
+		m_data.resize(bytes);
+
 	char * begin = reinterpret_cast<char*>(m_data.data());
 	m_fileStream.read(begin, bytes);
 	return bytes;
